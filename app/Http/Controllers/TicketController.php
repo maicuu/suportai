@@ -6,6 +6,7 @@ use App\Http\Requests\StoreReplyRequest;
 use App\Http\Requests\StoreTicketRequest;
 use App\Http\Resources\MessageResource;
 use App\Http\Resources\TicketResource;
+use App\Jobs\ClassifyTicket;
 use App\Models\Tenant;
 use App\Models\Ticket;
 use Illuminate\Http\JsonResponse;
@@ -61,7 +62,9 @@ class TicketController extends Controller
             return $ticket;
         });
 
-        // Passo 4: dispatch(new ClassifyTicket($ticket)) — IA em fila.
+        // Efeito colateral ASSÍNCRONO, fora do request (espírito outbox/@Async):
+        // a IA classifica e rascunha em background — o cliente não espera o LLM.
+        ClassifyTicket::dispatch($ticket->id);
 
         return TicketResource::make($ticket->load('messages'))
             ->response()

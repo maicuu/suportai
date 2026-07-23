@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Ai\AiProvider;
+use App\Ai\Providers\FakeAiProvider;
+use App\Ai\Providers\GroqAiProvider;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +18,20 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Amarra o PORT a um ADAPTER conforme a config (≈ @Bean/@Conditional
+        // do Spring). O domínio pede AiProvider; o container entrega o certo.
+        $this->app->bind(AiProvider::class, function ($app): AiProvider {
+            $config = $app['config']->get('services.ai');
+
+            return match ($config['provider']) {
+                'groq' => new GroqAiProvider(
+                    apiKey: (string) $config['groq']['key'],
+                    model: (string) $config['groq']['model'],
+                    baseUrl: (string) $config['groq']['base_url'],
+                ),
+                default => new FakeAiProvider(),
+            };
+        });
     }
 
     /**

@@ -8,7 +8,8 @@
 - **Auth:** Fortify (sessão/cookie — modo correto pra Inertia). 2FA e passkeys já vêm de fábrica.
 - **Multi-tenant:** `tenants` + `tenant_id` FK em `users`/`tickets`; trait `BelongsToTenant` (global scope + auto-fill) isola tudo pelo usuário logado. Teste de isolamento verde.
 - **Domínio:** `Ticket` + `Message` (thread) com relações. CRUD escopado: abertura **pública** por slug (`POST /t/{slug}/tickets`) + listagem/detalhe/reply do agente (auth), via Form Request + API Resource. Endpoint público testado em HTTP (201).
-- **Fila:** tabela `jobs` criada; driver a definir (começaremos em `database`).
+- **Fila:** driver `database`. Job `ClassifyTicket` (tries=3 + backoff) roda a IA **fora do request**.
+- **IA:** porta hexagonal `AiProvider` + adapters `FakeAiProvider` (default, offline) e `GroqAiProvider`; binding por config (`AI_PROVIDER`). Abrir ticket dispara `ClassifyTicket`.
 - **Servido em:** `https://supportai.test` (Herd link + TLS).
 
 ### Pendências imediatas (Fase 1)
@@ -19,9 +20,18 @@
 - [ ] Registro cria/associa tenant; login escopado.
 - [ ] Tickets: migration + model + relações (messages), Form Request, API Resource.
 - [ ] Reverb + Event broadcasting ao criar/responder ticket.
-- [ ] Porta `AiProvider` + Job de classificação/rascunho (adapter Groq).
+- [x] Porta `AiProvider` (hexagonal) + Job `ClassifyTicket` em fila (adapters Fake/Groq).
 
 ## Histórico
+
+### 2026-07-23 · Passo 4 — IA plugável na fila (porta hexagonal + Job) · ✅ concluído
+- **Arquivos:** `app/Ai/AiProvider.php` (port), `app/Ai/AiAnalysis.php` (DTO), `app/Ai/Providers/{Fake,Groq}AiProvider.php`, `app/Jobs/ClassifyTicket.php`, `app/Providers/AppServiceProvider.php` (binding), `config/services.php`, `.env(.example)`, `app/Http/Controllers/TicketController.php` (dispatch), `tests/Feature/AiClassificationTest.php`.
+- **Notas técnicas:**
+  - **Port hexagonal:** domínio depende só de `AiProvider`; adapters plugáveis. Binding no container por `config('services.ai.provider')` (`fake` default | `groq`).
+  - **Job `ClassifyTicket`** (recebe só o id): busca `withoutGlobalScopes` (fila não tem usuário logado), chama a IA, `forceFill` nos campos de IA (não-fillable), salva. `tries=3` + backoff = resiliência; falha não derruba o ticket.
+  - Abrir ticket faz `ClassifyTicket::dispatch()` — efeito colateral assíncrono, fora do request.
+  - **Verificação:** `php artisan test` 52/52. Demo HTTP real: POST 201 com `ai=null` → `queue:work` → ticket classificado (category/priority/sentiment/rascunho).
+- **Como rodar a IA localmente:** `php artisan queue:work` (ou `composer dev`). Groq: setar `AI_PROVIDER=groq` + `GROQ_API_KEY` no `.env`.
 
 ### 2026-07-23 · Passo 2 — Tickets (CRUD escopado + thread + API Resource) · ✅ concluído
 - **Arquivos:** `app/Models/Message.php` + migration/factory, `app/Models/{Ticket,Tenant}.php` (relações), `app/Http/Controllers/TicketController.php`, `app/Http/Requests/{StoreTicketRequest,StoreReplyRequest}.php`, `app/Http/Resources/{Ticket,Message}Resource.php`, `routes/web.php`, `bootstrap/app.php` (CSRF), `tests/Feature/TicketTest.php`.
