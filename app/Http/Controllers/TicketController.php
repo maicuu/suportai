@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\TicketCreated;
 use App\Http\Requests\StoreReplyRequest;
 use App\Http\Requests\StoreTicketRequest;
 use App\Http\Resources\MessageResource;
@@ -61,6 +62,9 @@ class TicketController extends Controller
 
             return $ticket;
         });
+
+        // Tempo real: avisa o board dos agentes que um ticket acabou de chegar.
+        TicketCreated::dispatch($ticket);
 
         // Efeito colateral ASSÍNCRONO, fora do request (espírito outbox/@Async):
         // a IA classifica e rascunha em background — o cliente não espera o LLM.

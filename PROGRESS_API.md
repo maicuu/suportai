@@ -10,6 +10,7 @@
 - **Domínio:** `Ticket` + `Message` (thread) com relações. CRUD escopado: abertura **pública** por slug (`POST /t/{slug}/tickets`) + listagem/detalhe/reply do agente (auth), via Form Request + API Resource. Endpoint público testado em HTTP (201).
 - **Fila:** driver `database`. Job `ClassifyTicket` (tries=3 + backoff) roda a IA **fora do request**.
 - **IA:** porta hexagonal `AiProvider` + adapters `FakeAiProvider` (default, offline) e `GroqAiProvider`; binding por config (`AI_PROVIDER`). Abrir ticket dispara `ClassifyTicket`.
+- **Tempo real:** Reverb (WebSocket, `reverb:start` na porta 8080). Events `TicketCreated`/`TicketClassified` no canal **privado** `tenant.{id}`; broadcast enfileirado (Reverb fora do ar não quebra o request). Falta o board React (Passo 5) pra consumir.
 - **Servido em:** `https://supportai.test` (Herd link + TLS).
 
 ### Pendências imediatas (Fase 1)
@@ -19,10 +20,19 @@
 - [x] Tickets: CRUD escopado, Form Request, API Resource, thread de `messages` (48/48 testes verdes).
 - [ ] Registro cria/associa tenant; login escopado.
 - [ ] Tickets: migration + model + relações (messages), Form Request, API Resource.
-- [ ] Reverb + Event broadcasting ao criar/responder ticket.
+- [x] Reverb + Event broadcasting (`TicketCreated`/`TicketClassified`) em canal privado por tenant.
+- [ ] Board React (Inertia) consumindo os endpoints + Echo (Passo 5).
 - [x] Porta `AiProvider` (hexagonal) + Job `ClassifyTicket` em fila (adapters Fake/Groq).
 
 ## Histórico
+
+### 2026-07-23 · Passo 3 — Tempo real com Reverb (broadcast por tenant) · ✅ concluído
+- **Arquivos:** `install:broadcasting --reverb` (config/reverb.php, config/broadcasting.php, `routes/channels.php`, `.env` REVERB_*), `app/Events/{TicketCreated,TicketClassified}.php`, `app/Models/Ticket.php` (`toBroadcastArray`), `TicketController`/`ClassifyTicket` (dispatch), `.env.example`, `tests/Feature/BroadcastTest.php`.
+- **Notas técnicas:**
+  - Canal **privado** `tenant.{tenantId}` autorizado por `user->tenant_id` — isolamento multi-tenant também no WebSocket.
+  - `TicketCreated` (ao abrir) e `TicketClassified` (ao fim da IA) via `ShouldBroadcast` (enfileirado → resiliente). Payload enxuto por `Ticket::toBroadcastArray()`. Nomes: `ticket.created`, `ticket.classified`.
+  - Servidor: `php artisan reverb:start` (porta 8080) — verificado subindo e aceitando conexão.
+  - **Verificação:** `php artisan test` 55/55 (3 novos de broadcast: dispatch no create, canal privado correto, dispatch no fim do job).
 
 ### 2026-07-23 · Passo 4 — IA plugável na fila (porta hexagonal + Job) · ✅ concluído
 - **Arquivos:** `app/Ai/AiProvider.php` (port), `app/Ai/AiAnalysis.php` (DTO), `app/Ai/Providers/{Fake,Groq}AiProvider.php`, `app/Jobs/ClassifyTicket.php`, `app/Providers/AppServiceProvider.php` (binding), `config/services.php`, `.env(.example)`, `app/Http/Controllers/TicketController.php` (dispatch), `tests/Feature/AiClassificationTest.php`.

@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Ai\AiProvider;
+use App\Events\TicketClassified;
 use App\Models\Ticket;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -47,6 +48,7 @@ class ClassifyTicket implements ShouldQueue
             'ai_processed_at' => now(),
         ])->save();
 
-        // Passo 3: broadcast(new TicketUpdated($ticket)) — atualiza o board ao vivo.
+        // Tempo real: avisa o board que a IA terminou (o card "acende").
+        TicketClassified::dispatch($ticket);
     }
 }

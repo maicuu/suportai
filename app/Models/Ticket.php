@@ -41,4 +41,24 @@ class Ticket extends Model
     {
         return $this->hasMany(Message::class)->orderBy('created_at');
     }
+
+    /**
+     * Payload enxuto do ticket para o board em tempo real (broadcast).
+     *
+     * @return array<string, mixed>
+     */
+    public function toBroadcastArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'subject' => $this->subject,
+            'requester_name' => $this->requester_name,
+            'status' => $this->status,
+            'category' => $this->category,
+            'priority' => $this->priority,
+            'sentiment' => $this->sentiment,
+            'ai_suggested_reply' => $this->ai_suggested_reply,
+            'created_at' => $this->created_at,
+        ];
+    }
 }
