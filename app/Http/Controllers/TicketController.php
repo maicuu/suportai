@@ -5,41 +5,44 @@ namespace App\Http\Controllers;
 use App\Events\TicketCreated;
 use App\Http\Requests\StoreReplyRequest;
 use App\Http\Requests\StoreTicketRequest;
-use App\Http\Resources\MessageResource;
 use App\Http\Resources\TicketResource;
 use App\Jobs\ClassifyTicket;
 use App\Models\Tenant;
 use App\Models\Ticket;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 
 class TicketController extends Controller
 {
     /**
-     * Lista os tickets do tenant do agente logado.
-     * O global scope (BelongsToTenant) já filtra por tenant — nada de
-     * "buscar tudo e filtrar na mão".
+     * Board dos agentes (Inertia). O global scope (BelongsToTenant) já filtra
+     * pelo tenant do usuário logado — nada de "buscar tudo e filtrar".
      */
-    public function index(): AnonymousResourceCollection
+    public function index(): InertiaResponse
     {
-        $tickets = Ticket::latest()->get();
-
-        return TicketResource::collection($tickets);
+        return Inertia::render('tickets/index', [
+            'tickets' => TicketResource::collection(Ticket::latest()->get())->resolve(),
+            'tenantId' => request()->user()->tenant_id,
+        ]);
     }
 
     /**
-     * Detalhe do ticket + thread de mensagens.
-     * O route-model binding respeita o global scope: ticket de outro tenant
-     * simplesmente não é encontrado (404).
+     * Detalhe do ticket + thread (Inertia). Route-model binding respeita o
+     * global scope: ticket de outro tenant nem é encontrado (404).
      */
-    public function show(Ticket $ticket): TicketResource
+    public function show(Ticket $ticket): InertiaResponse
     {
-        return TicketResource::make($ticket->load('messages'));
+        return Inertia::render('tickets/show', [
+            'ticket' => TicketResource::make($ticket->load('messages'))->resolve(),
+            'tenantId' => request()->user()->tenant_id,
+        ]);
     }
 
     /**
-     * Abertura PÚBLICA de ticket (o "ticket chega").
+     * Abertura PÚBLICA de ticket (JSON) — o "ticket chega".
      * O tenant vem do slug na URL, nunca de input arbitrário do corpo.
      */
     public function store(StoreTicketRequest $request, Tenant $tenant): JsonResponse
@@ -76,11 +79,11 @@ class TicketController extends Controller
     }
 
     /**
-     * Resposta do agente (autenticado) na thread do ticket.
+     * Resposta do agente (autenticado) na thread — volta pra tela do ticket.
      */
-    public function reply(StoreReplyRequest $request, Ticket $ticket): JsonResponse
+    public function reply(StoreReplyRequest $request, Ticket $ticket): RedirectResponse
     {
-        $message = $ticket->messages()->create([
+        $ticket->messages()->create([
             'user_id' => $request->user()->id,
             'author_type' => 'agent',
             'author_name' => $request->user()->name,
@@ -88,8 +91,6 @@ class TicketController extends Controller
         ]);
         // tenant_id é preenchido automaticamente pela trait (usuário logado).
 
-        return MessageResource::make($message)
-            ->response()
-            ->setStatusCode(201);
+        return back();
     }
 }

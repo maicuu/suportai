@@ -21,10 +21,17 @@
 - [ ] Registro cria/associa tenant; login escopado.
 - [ ] Tickets: migration + model + relações (messages), Form Request, API Resource.
 - [x] Reverb + Event broadcasting (`TicketCreated`/`TicketClassified`) em canal privado por tenant.
-- [ ] Board React (Inertia) consumindo os endpoints + Echo (Passo 5).
+- [x] Board React (Inertia) + Echo ao vivo (Passo 5) — **Fase 1 completa**.
 - [x] Porta `AiProvider` (hexagonal) + Job `ClassifyTicket` em fila (adapters Fake/Groq).
 
 ## Histórico
+
+### 2026-07-23 · Passo 5 (glue backend) — controllers Inertia · ✅ concluído
+- **Arquivos:** `app/Http/Controllers/TicketController.php`, `app/Models/Ticket.php` (`toBroadcastArray`), `tests/Feature/TicketTest.php`.
+- **Notas técnicas:**
+  - `TicketController@index/@show` agora retornam `Inertia::render` (props via `Resource->resolve()`, sem wrapper `data`); `@reply` redireciona (`back()`); intake público segue JSON.
+  - `toBroadcastArray` remodelado com `ai` aninhado (igual ao `TicketResource`) — front trata props e broadcast do mesmo jeito.
+  - Testes de ticket migrados p/ asserções Inertia (`AssertableInertia`). Suite 56/56.
 
 ### 2026-07-23 · Passo 3 — Tempo real com Reverb (broadcast por tenant) · ✅ concluído
 - **Arquivos:** `install:broadcasting --reverb` (config/reverb.php, config/broadcasting.php, `routes/channels.php`, `.env` REVERB_*), `app/Events/{TicketCreated,TicketClassified}.php`, `app/Models/Ticket.php` (`toBroadcastArray`), `TicketController`/`ClassifyTicket` (dispatch), `.env.example`, `tests/Feature/BroadcastTest.php`.

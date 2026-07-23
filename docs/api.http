@@ -6,7 +6,8 @@
 
 ### =============================================================
 ### [PÚBLICO] Abertura de ticket — o "ticket chega"
-### Não exige auth; o tenant vem do slug na URL. Isento de CSRF.
+### JSON, sem auth; o tenant vem do slug na URL. Isento de CSRF.
+### Dispara: TicketCreated (broadcast) + ClassifyTicket (IA na fila).
 ### =============================================================
 POST {{baseUrl}}/t/{{tenant}}/tickets
 Content-Type: application/json
@@ -20,24 +21,9 @@ Accept: application/json
 }
 
 ### =============================================================
-### [AGENTE] Endpoints autenticados (sessão/cookie).
-### Faça login no navegador em {{baseUrl}}/login — o REST Client
-### reaproveita o cookie de sessão do navegador.
+### [AGENTE] Área autenticada = páginas Inertia (abrir no NAVEGADOR, logado).
+### Não são JSON puro; são consumidas pelo front Inertia via sessão/cookie.
 ### =============================================================
-
-### [AGENTE] Listar tickets do meu tenant (escopado automaticamente)
-GET {{baseUrl}}/tickets
-Accept: application/json
-
-### [AGENTE] Detalhe do ticket + thread de mensagens
-GET {{baseUrl}}/tickets/1
-Accept: application/json
-
-### [AGENTE] Responder na thread do ticket
-POST {{baseUrl}}/tickets/1/reply
-Content-Type: application/json
-Accept: application/json
-
-{
-  "body": "Olá! Já estou verificando o problema do relatório."
-}
+###   GET  {{baseUrl}}/tickets             → board Kanban (atualiza ao vivo via Reverb)
+###   GET  {{baseUrl}}/tickets/{id}         → detalhe + thread + sugestão da IA
+###   POST {{baseUrl}}/tickets/{id}/reply   → resposta do agente (form Inertia; redireciona)

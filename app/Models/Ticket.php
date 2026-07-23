@@ -49,15 +49,20 @@ class Ticket extends Model
      */
     public function toBroadcastArray(): array
     {
+        // Mesma forma (subset) do TicketResource, pra o front tratar props
+        // iniciais e eventos de broadcast do mesmo jeito.
         return [
             'id' => $this->id,
-            'subject' => $this->subject,
             'requester_name' => $this->requester_name,
+            'subject' => $this->subject,
             'status' => $this->status,
-            'category' => $this->category,
-            'priority' => $this->priority,
-            'sentiment' => $this->sentiment,
-            'ai_suggested_reply' => $this->ai_suggested_reply,
+            'ai' => [
+                'category' => $this->category,
+                'priority' => $this->priority,
+                'sentiment' => $this->sentiment,
+                'suggested_reply' => $this->ai_suggested_reply,
+                'processed_at' => $this->ai_processed_at,
+            ],
             'created_at' => $this->created_at,
         ];
     }
