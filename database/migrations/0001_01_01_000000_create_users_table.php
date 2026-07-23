@@ -13,6 +13,10 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            // Isolamento multi-tenant: todo usuário pertence a um tenant.
+            // constrained() cria a FK -> tenants.id; cascadeOnDelete apaga
+            // os usuários se o tenant for removido.
+            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
