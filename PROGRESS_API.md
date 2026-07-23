@@ -7,7 +7,7 @@
 - **Banco:** SQLite (`database/database.sqlite`). Migrations base rodadas (users, cache, jobs, passkeys, 2FA).
 - **Auth:** Fortify (sessão/cookie — modo correto pra Inertia). 2FA e passkeys já vêm de fábrica.
 - **Multi-tenant:** `tenants` + `tenant_id` FK em `users`/`tickets`; trait `BelongsToTenant` (global scope + auto-fill) isola tudo pelo usuário logado. Teste de isolamento verde.
-- **Domínio:** `Ticket` criado (com campos de IA nullable). Falta CRUD/API, Form Request, Resource e `messages`.
+- **Domínio:** `Ticket` + `Message` (thread) com relações. CRUD escopado: abertura **pública** por slug (`POST /t/{slug}/tickets`) + listagem/detalhe/reply do agente (auth), via Form Request + API Resource. Endpoint público testado em HTTP (201).
 - **Fila:** tabela `jobs` criada; driver a definir (começaremos em `database`).
 - **Servido em:** `https://supportai.test` (Herd link + TLS).
 
@@ -15,13 +15,25 @@
 - [x] Tabela `tenants` + model `Tenant`.
 - [x] `tenant_id` em `users` (+ FK) e relações `Tenant`↔`User`; registro cria tenant.
 - [x] Global scope por tenant (trait `BelongsToTenant`) + teste de isolamento (3 casos verdes).
-- [ ] Tickets: CRUD escopado, Form Request, API Resource, thread de `messages`.
+- [x] Tickets: CRUD escopado, Form Request, API Resource, thread de `messages` (48/48 testes verdes).
 - [ ] Registro cria/associa tenant; login escopado.
 - [ ] Tickets: migration + model + relações (messages), Form Request, API Resource.
 - [ ] Reverb + Event broadcasting ao criar/responder ticket.
 - [ ] Porta `AiProvider` + Job de classificação/rascunho (adapter Groq).
 
 ## Histórico
+
+### 2026-07-23 · Passo 2 — Tickets (CRUD escopado + thread + API Resource) · ✅ concluído
+- **Arquivos:** `app/Models/Message.php` + migration/factory, `app/Models/{Ticket,Tenant}.php` (relações), `app/Http/Controllers/TicketController.php`, `app/Http/Requests/{StoreTicketRequest,StoreReplyRequest}.php`, `app/Http/Resources/{Ticket,Message}Resource.php`, `routes/web.php`, `bootstrap/app.php` (CSRF), `tests/Feature/TicketTest.php`.
+- **Endpoints:** `POST /t/{tenant:slug}/tickets` (público), `GET /tickets`, `GET /tickets/{ticket}`, `POST /tickets/{ticket}/reply` (auth).
+- **Notas técnicas:**
+  - Abertura pública escopada por **slug** do tenant (route-model binding); cria ticket + 1ª mensagem (`author_type=customer`) em `DB::transaction`.
+  - `tenant_id` em `messages` também (isolamento em profundidade, via trait); em mensagem de cliente é setado explícito, em reply de agente é auto-fill.
+  - Saída sempre via **API Resource** (nunca model cru; `tenant_id` não é exposto). `whenLoaded('messages')` evita N+1.
+  - Isenção de CSRF só para `t/*/tickets` (intake público sem sessão).
+  - `status` setado explícito no create (default do banco não reflete no objeto em memória).
+  - **Verificação:** `php artisan test` 48/48; smoke test HTTP real do endpoint público → 201.
+  - **Ops:** após mudar rotas/middleware, `herd restart` limpa o opcache/worker (evita 502).
 
 ### 2026-07-23 · Passo 1d — global scope por tenant (`BelongsToTenant`) + `Ticket` · ✅ concluído
 - **Arquivos:** `app/Models/Concerns/BelongsToTenant.php`, `app/Models/Ticket.php`, `database/migrations/2026_07_23_155008_create_tickets_table.php`, `database/factories/TicketFactory.php`, `tests/Feature/TenantIsolationTest.php`.

@@ -22,6 +22,12 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
+
+        // Endpoint público de abertura de ticket (chamado por formulário/
+        // e-mail externo): não tem sessão nem token CSRF.
+        $middleware->validateCsrfTokens(except: [
+            't/*/tickets',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

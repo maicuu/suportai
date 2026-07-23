@@ -1,17 +1,43 @@
 ### SupportAI — API (REST Client / arquivo .http)
 ### Uso: extensão "REST Client" (VS Code). Rode cada request com "Send Request".
-### Endpoints custom (tickets, etc.) serão adicionados conforme forem criados.
 
 @baseUrl = https://supportai.test
-# Token/cookie de sessão: como o app usa auth por sessão (Inertia/Fortify),
-# a autenticação de verdade acontece pelo navegador. Para chamadas de API puras
-# (fase posterior, ex. webhook de e-mail→ticket), usaremos aqui um header/token.
-@token =
+@tenant = demo
 
-### Smoke test — landing responde?
-GET {{baseUrl}}/
-Accept: text/html
+### =============================================================
+### [PÚBLICO] Abertura de ticket — o "ticket chega"
+### Não exige auth; o tenant vem do slug na URL. Isento de CSRF.
+### =============================================================
+POST {{baseUrl}}/t/{{tenant}}/tickets
+Content-Type: application/json
+Accept: application/json
 
-### (TODO Fase 1 · passo 2) Criar ticket — POST {{baseUrl}}/api/tickets
-### (TODO Fase 1 · passo 2) Listar tickets do tenant — GET {{baseUrl}}/api/tickets
-### (TODO Fase 1 · passo 2) Detalhe do ticket + thread — GET {{baseUrl}}/api/tickets/{id}
+{
+  "requester_name": "Joana Cliente",
+  "requester_email": "joana@cliente.com",
+  "subject": "App trava ao abrir relatório",
+  "body": "Toda vez que clico em Relatórios o app fecha."
+}
+
+### =============================================================
+### [AGENTE] Endpoints autenticados (sessão/cookie).
+### Faça login no navegador em {{baseUrl}}/login — o REST Client
+### reaproveita o cookie de sessão do navegador.
+### =============================================================
+
+### [AGENTE] Listar tickets do meu tenant (escopado automaticamente)
+GET {{baseUrl}}/tickets
+Accept: application/json
+
+### [AGENTE] Detalhe do ticket + thread de mensagens
+GET {{baseUrl}}/tickets/1
+Accept: application/json
+
+### [AGENTE] Responder na thread do ticket
+POST {{baseUrl}}/tickets/1/reply
+Content-Type: application/json
+Accept: application/json
+
+{
+  "body": "Olá! Já estou verificando o problema do relatório."
+}

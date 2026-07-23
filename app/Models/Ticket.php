@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Ticket extends Model
 {
@@ -29,5 +30,15 @@ class Ticket extends Model
         return [
             'ai_processed_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Thread de mensagens do ticket (cliente + agentes), em ordem cronológica.
+     *
+     * @return HasMany<Message, $this>
+     */
+    public function messages(): HasMany
+    {
+        return $this->hasMany(Message::class)->orderBy('created_at');
     }
 }
