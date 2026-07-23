@@ -1,0 +1,17 @@
+### SupportAI — API (REST Client / arquivo .http)
+### Uso: extensão "REST Client" (VS Code). Rode cada request com "Send Request".
+### Endpoints custom (tickets, etc.) serão adicionados conforme forem criados.
+
+@baseUrl = https://supportai.test
+# Token/cookie de sessão: como o app usa auth por sessão (Inertia/Fortify),
+# a autenticação de verdade acontece pelo navegador. Para chamadas de API puras
+# (fase posterior, ex. webhook de e-mail→ticket), usaremos aqui um header/token.
+@token =
+
+### Smoke test — landing responde?
+GET {{baseUrl}}/
+Accept: text/html
+
+### (TODO Fase 1 · passo 2) Criar ticket — POST {{baseUrl}}/api/tickets
+### (TODO Fase 1 · passo 2) Listar tickets do tenant — GET {{baseUrl}}/api/tickets
+### (TODO Fase 1 · passo 2) Detalhe do ticket + thread — GET {{baseUrl}}/api/tickets/{id}
